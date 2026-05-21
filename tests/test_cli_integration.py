@@ -24,11 +24,17 @@ def test_run_from_config_writes_report_outputs(tmp_path: Path) -> None:
     assert (run_dir / "qlib_alpha360_like.csv").exists()
     assert (run_dir / "metrics.json").exists()
     assert (run_dir / "report.html").exists()
+    assert (run_dir / "charts" / "equity_curve.png").exists()
+    assert (run_dir / "charts" / "drawdown.png").exists()
+    assert (run_dir / "charts" / "strategy_returns.png").exists()
+    assert (run_dir / "charts" / "factor_ic.png").exists()
 
     strategy_returns = pd.read_csv(run_dir / "strategy_returns.csv")
     factor_summary = pd.read_csv(run_dir / "factor_ic_summary.csv")
+    html = (run_dir / "report.html").read_text(encoding="utf-8")
     assert {"trend", "mean_reversion", "swing"}.issubset(strategy_returns.columns)
     assert {"horizon", "ic_mean", "positive_rate"}.issubset(factor_summary.columns)
+    assert "charts/equity_curve.png" in html
 
 
 def test_cli_module_entrypoint_writes_outputs(tmp_path: Path) -> None:
@@ -51,3 +57,4 @@ def test_cli_module_entrypoint_writes_outputs(tmp_path: Path) -> None:
     assert "Wrote run outputs to" in completed.stdout
     assert (output_dir / "run_001" / "report.html").exists()
     assert (output_dir / "run_001" / "qlib_ohlcv.csv").exists()
+    assert (output_dir / "run_001" / "charts" / "equity_curve.png").exists()
