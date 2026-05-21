@@ -7,10 +7,20 @@ from cta_research.analysis import calculate_metrics, factor_ic
 from cta_research.backtest import run_backtest
 from cta_research.config import load_config
 from cta_research.data import load_ohlcv_directory
+from cta_research.factor_research import (
+    factor_correlation_matrix,
+    factor_ic_decay,
+    quantile_return_summary,
+)
 from cta_research.factors import calculate_factor_set
-from cta_research.portfolio import blend_strategy_signals, size_by_volatility
+from cta_research.portfolio import (
+    blend_strategy_signals,
+    size_by_volatility,
+    strategy_return_attribution,
+)
+from cta_research.qlib import build_alpha360_like_features, market_data_to_qlib_frame
 from cta_research.reporting import write_run_outputs
-from cta_research.risk import cap_exposure
+from cta_research.risk import apply_drawdown_derisking, cap_exposure
 from cta_research.strategies import calculate_strategy_signals
 
 
@@ -47,8 +57,64 @@ def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") ->
         fee_bps=config.backtest.fee_bps,
         slippage_bps=config.backtest.slippage_bps,
     )
+    positions = apply_drawdown_derisking(
+        positions,
+        result.equity,
+        drawdown_warning=config.risk.drawdown_warning,
+        drawdown_hard=config.risk.drawdown_hard,
+        min_exposure_multiplier=config.risk.min_exposure_multiplier,
+    )
+    result = run_backtest(
+        data=data,
+        target_positions=positions,
+        initial_capital=config.backtest.initial_capital,
+        fee_bps=config.backtest.fee_bps,
+        slippage_bps=config.backtest.slippage_bps,
+    )
     metrics = calculate_metrics(result.equity, result.returns, result.trades)
     ic = factor_ic(factors["momentum"], data.close, horizons=[1, 3, 5, 10])
+    research_factors = {
+        name: frame
+        for name, frame in factors.items()
+        if name
+        in {
+            "momentum",
+            "ma_slope",
+            "donchian",
+            "rsi",
+            "bollinger_zscore",
+            "volume_anomaly",
+            "vwap_deviation",
+            "price_volume_divergence",
+            "alternative",
+        }
+    }
+    research_outputs = {
+        "factor_ic_summary": factor_ic_decay(
+            factors["momentum"],
+            data.close,
+            horizons=[1, 3, 5, 10],
+        ),
+        "factor_correlation": factor_correlation_matrix(research_factors).reset_index(
+            names="factor"
+        ),
+        "momentum_quantile_returns": quantile_return_summary(
+            factors["momentum"],
+            data.close,
+            horizon=1,
+            quantiles=min(5, len(data.symbols)),
+        ),
+        "qlib_ohlcv": market_data_to_qlib_frame(data),
+        "qlib_alpha360_like": build_alpha360_like_features(data, windows=[3, 5]),
+    }
+    strategy_returns = strategy_return_attribution(
+        data=data,
+        strategy_signals=strategy_signals,
+        weights=config.portfolio.strategy_weights,
+        volatility=factors["historical_volatility"],
+        volatility_target=config.portfolio.volatility_target,
+        final_positions=result.positions,
+    )
     run_dir = _next_run_dir(Path(output_dir))
     write_run_outputs(
         run_dir=run_dir,
@@ -57,6 +123,8 @@ def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") ->
         trades=result.trades,
         metrics=metrics,
         factor_ic=ic,
+        strategy_returns=strategy_returns,
+        research_outputs=research_outputs,
         config_text=config_path.read_text(encoding="utf-8"),
     )
     return run_dir
@@ -69,3 +137,7 @@ def main() -> None:
     args = parser.parse_args()
     run_dir = run_from_config(args.config, args.output_dir)
     print(f"Wrote run outputs to {run_dir}")
+
+
+if __name__ == "__main__":
+    main()

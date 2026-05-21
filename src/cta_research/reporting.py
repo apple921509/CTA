@@ -37,6 +37,12 @@ REPORT_TEMPLATE = """
   <pre>{{ equity_tail }}</pre>
   <h2>Trades</h2>
   <p>Total trades: {{ trade_count }}</p>
+  <h2>Research Attachments</h2>
+  <ul>
+    {% for attachment in attachments %}
+    <li>{{ attachment }}</li>
+    {% endfor %}
+  </ul>
 </body>
 </html>
 """
@@ -50,6 +56,7 @@ def write_run_outputs(
     metrics: dict[str, float | int],
     factor_ic: pd.DataFrame,
     strategy_returns: pd.DataFrame | None = None,
+    research_outputs: dict[str, pd.DataFrame] | None = None,
     config_text: str | None = None,
 ) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +70,21 @@ def write_run_outputs(
         strategy_returns = pd.DataFrame(index=equity.index)
     strategy_returns.to_csv(run_dir / "strategy_returns.csv")
 
+    attachments = [
+        "config.yaml",
+        "equity_curve.csv",
+        "positions.csv",
+        "trades.csv",
+        "strategy_returns.csv",
+        "factor_ic.csv",
+        "metrics.json",
+    ]
+    if research_outputs is not None:
+        for name, frame in research_outputs.items():
+            filename = f"{name}.csv"
+            frame.to_csv(run_dir / filename, index=False)
+            attachments.append(filename)
+
     (run_dir / "metrics.json").write_text(
         json.dumps(metrics, indent=2),
         encoding="utf-8",
@@ -74,5 +96,6 @@ def write_run_outputs(
         metrics=metrics,
         equity_tail=equity.tail().to_string(),
         trade_count=len(trades),
+        attachments=attachments,
     )
     (run_dir / "report.html").write_text(html, encoding="utf-8")

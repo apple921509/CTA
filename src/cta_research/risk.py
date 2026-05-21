@@ -10,7 +10,7 @@ def cap_exposure(
 ) -> pd.DataFrame:
     capped = positions.clip(lower=-max_symbol_weight, upper=max_symbol_weight)
     gross_exposure = capped.abs().sum(axis=1)
-    scale = (max_gross_exposure / gross_exposure.replace(0, pd.NA)).clip(upper=1.0)
+    scale = (max_gross_exposure / gross_exposure.mask(gross_exposure == 0)).clip(upper=1.0)
     return capped.mul(scale.fillna(1.0), axis=0)
 
 

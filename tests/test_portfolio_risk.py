@@ -1,6 +1,11 @@
 import pandas as pd
 
-from cta_research.portfolio import blend_strategy_signals, size_by_volatility
+from cta_research.data import MarketData
+from cta_research.portfolio import (
+    blend_strategy_signals,
+    size_by_volatility,
+    strategy_return_attribution,
+)
 from cta_research.risk import apply_drawdown_derisking, cap_exposure
 
 
@@ -56,6 +61,43 @@ def test_size_and_cap_exposure_limits_gross() -> None:
 
     assert capped.abs().max().max() <= 0.3
     assert capped.abs().sum(axis=1).max() <= 0.5
+
+
+def test_strategy_return_attribution_sums_to_gross_returns() -> None:
+    index = pd.date_range("2024-01-01", periods=4)
+    close = pd.DataFrame({"BTCUSDT": [100.0, 110.0, 121.0, 133.1]}, index=index)
+    data = MarketData(
+        open=close,
+        high=close,
+        low=close,
+        close=close,
+        volume=pd.DataFrame(1.0, index=index, columns=close.columns),
+    )
+    signals = {
+        "trend": pd.DataFrame(1.0, index=index, columns=close.columns),
+        "mean_reversion": pd.DataFrame(-0.5, index=index, columns=close.columns),
+    }
+    volatility = pd.DataFrame(0.25, index=index, columns=close.columns)
+    final_positions = blend_strategy_signals(
+        signals,
+        {"trend": 0.5, "mean_reversion": 0.5},
+    )
+
+    strategy_returns = strategy_return_attribution(
+        data=data,
+        strategy_signals=signals,
+        weights={"trend": 0.5, "mean_reversion": 0.5},
+        volatility=volatility,
+        volatility_target=0.25,
+        final_positions=final_positions,
+    )
+
+    gross_returns = (final_positions.shift(1).fillna(0.0) * close.pct_change().fillna(0.0)).sum(axis=1)
+    pd.testing.assert_series_equal(
+        strategy_returns.sum(axis=1),
+        gross_returns,
+        check_names=False,
+    )
 
 
 def test_apply_drawdown_derisking_reduces_exposure() -> None:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from cta_research.factor_research import factor_ic_table
+
 
 def max_drawdown(equity: pd.Series) -> float:
     if equity.empty:
@@ -67,30 +69,6 @@ def factor_ic(
     close: pd.DataFrame,
     horizons: list[int],
 ) -> pd.DataFrame:
-    records = []
-
-    for horizon in horizons:
-        future_returns = close.pct_change(horizon).shift(-horizon)
-        aligned_factor, aligned_returns = factor.align(future_returns, join="inner")
-
-        for timestamp in aligned_factor.index:
-            pair = pd.concat(
-                [aligned_factor.loc[timestamp], aligned_returns.loc[timestamp]],
-                axis=1,
-                keys=["factor", "future_return"],
-            ).dropna()
-            if len(pair) < 2:
-                continue
-
-            records.append(
-                {
-                    "timestamp": timestamp,
-                    "horizon": horizon,
-                    "rank_ic": pair["factor"].corr(pair["future_return"], method="spearman"),
-                }
-            )
-
-    return pd.DataFrame.from_records(
-        records,
-        columns=["timestamp", "horizon", "rank_ic"],
+    return factor_ic_table(factor, close, horizons, method="spearman").rename(
+        columns={"ic": "rank_ic"}
     )

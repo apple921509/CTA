@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from cta_research.data import MarketData
+from cta_research.onchain import OnchainData, calculate_onchain_factor_set
 
 
 def _safe_divide(numerator: pd.DataFrame, denominator: pd.DataFrame) -> pd.DataFrame:
@@ -114,8 +115,11 @@ def rolling_zscore(frame: pd.DataFrame, window: int = 60) -> pd.DataFrame:
     return _safe_divide(frame - average, standard_deviation)
 
 
-def calculate_factor_set(data: MarketData) -> dict[str, pd.DataFrame]:
-    return {
+def calculate_factor_set(
+    data: MarketData,
+    onchain_data: OnchainData | None = None,
+) -> dict[str, pd.DataFrame]:
+    factors = {
         "momentum": momentum(data.close, lookback=5, skip=1),
         "ma_slope": moving_average_slope(data.close, window=5),
         "donchian": donchian_position(data.high, data.low, data.close, window=5),
@@ -131,3 +135,13 @@ def calculate_factor_set(data: MarketData) -> dict[str, pd.DataFrame]:
             window=5,
         ),
     }
+    if onchain_data is not None:
+        factors.update(
+            calculate_onchain_factor_set(
+                onchain_data,
+                index=data.close.index,
+                columns=data.close.columns,
+                window=5,
+            )
+        )
+    return factors
