@@ -75,6 +75,8 @@ def factor_ic_table(
             ).dropna()
             if len(pair) < 2:
                 continue
+            if pair["factor"].nunique() < 2 or pair["future_return"].nunique() < 2:
+                continue
             records.append(
                 {
                     "timestamp": timestamp,

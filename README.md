@@ -71,6 +71,25 @@ YAML 設定檔中的相對資料路徑，會以該設定檔所在位置為基準
 - factor orthogonalization。
 - quantile forward return analysis。
 
+## 因子准入制度
+
+`cta_research.factor_mining` 是策略研究的第一道門。任何因子進入組合前，都應先單獨驗證：
+
+- IC Mean
+- IR
+- positive rate
+- quantile long-short spread
+- turnover
+- 單因子回測績效
+
+每次 CLI run 會輸出：
+
+- `factor_scorecard.csv`
+- `factor_quantile_returns.csv`
+- `factor_single_backtests.csv`
+
+預設准入精神是先要求單因子本身有品質，再做多因子組合；不使用 ML 去拯救弱因子。
+
 ## 鏈上與替代因子
 
 `cta_research.onchain` 支援離線鏈上特徵研究：
@@ -138,9 +157,10 @@ onchain/mvrv/BTCUSDT.csv
 - 完成 backtest accounting：fee、slippage、positions、trades、equity curve、metrics。
 - 完成 Binance/OKX 研究資料下載器。
 - 完成因子研究工具、鏈上因子工具、進階驗證工具與 Qlib 匯出工具。
+- 完成因子准入制度：scorecard、quantile report、single-factor backtest。
 - 完成 Linear/Ridge/Random Forest 機器學習 baseline。
 - 每次 CLI run 會輸出回測、策略歸因、因子研究、Qlib 銜接與 HTML 總覽檔案。
-- 目前驗證：`pytest -v` 通過 73 個測試。
+- 目前驗證：`pytest -v` 通過 76 個測試。
 
 ## Roadmap
 

@@ -64,7 +64,26 @@ timestamp,value
 
 接著用 `load_onchain_feature_directory(...)` 載入，並把結果傳給 `calculate_factor_set(..., onchain_data=...)`。這樣 `alternative` 策略袖就能使用鏈上綜合因子。
 
-## 6. 驗證穩健性
+## 6. 先做因子准入
+
+任何完整策略都要先通過單因子驗證。每個因子至少要檢查：
+
+- IC Mean
+- IR
+- positive rate
+- quantile long-short spread
+- turnover
+- 單因子回測
+
+CLI run 會輸出：
+
+- `factor_scorecard.csv`
+- `factor_quantile_returns.csv`
+- `factor_single_backtests.csv`
+
+只有通過准入的因子，才應該進入多因子組合。弱因子不要用 ML 硬救。
+
+## 7. 驗證穩健性
 
 在把任何策略想法升級之前，先用 `cta_research.validation` 做：
 
@@ -75,7 +94,7 @@ timestamp,value
 
 這一步的目的不是追求單次漂亮績效，而是確認策略是否能跨期間、跨參數維持合理表現。
 
-## 7. 建立機器學習 Baseline
+## 8. 建立機器學習 Baseline
 
 使用 `cta_research.ml` 可以把現有因子轉成 supervised dataset，先做簡單模型驗證：
 
@@ -91,7 +110,7 @@ timestamp,value
 
 深度模型如 LSTM、Transformer 不建議一開始就上，應該等線性與樹模型 baseline 有正面訊號後再做。
 
-## 8. 匯出到 Qlib
+## 9. 匯出到 Qlib
 
 每次 CLI run 都會輸出 Qlib-friendly CSV：
 

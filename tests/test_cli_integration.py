@@ -17,6 +17,9 @@ def test_run_from_config_writes_report_outputs(tmp_path: Path) -> None:
     assert (run_dir / "trades.csv").exists()
     assert (run_dir / "strategy_returns.csv").exists()
     assert (run_dir / "factor_ic.csv").exists()
+    assert (run_dir / "factor_scorecard.csv").exists()
+    assert (run_dir / "factor_quantile_returns.csv").exists()
+    assert (run_dir / "factor_single_backtests.csv").exists()
     assert (run_dir / "factor_ic_summary.csv").exists()
     assert (run_dir / "factor_correlation.csv").exists()
     assert (run_dir / "momentum_quantile_returns.csv").exists()
@@ -31,9 +34,11 @@ def test_run_from_config_writes_report_outputs(tmp_path: Path) -> None:
 
     strategy_returns = pd.read_csv(run_dir / "strategy_returns.csv")
     factor_summary = pd.read_csv(run_dir / "factor_ic_summary.csv")
+    scorecard = pd.read_csv(run_dir / "factor_scorecard.csv")
     html = (run_dir / "report.html").read_text(encoding="utf-8")
     assert {"trend", "mean_reversion", "swing"}.issubset(strategy_returns.columns)
     assert {"horizon", "ic_mean", "positive_rate"}.issubset(factor_summary.columns)
+    assert {"factor", "decision"}.issubset(scorecard.columns)
     assert "charts/equity_curve.png" in html
 
 

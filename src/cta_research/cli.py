@@ -12,6 +12,11 @@ from cta_research.factor_research import (
     factor_ic_decay,
     quantile_return_summary,
 )
+from cta_research.factor_mining import (
+    factor_quantile_report,
+    mine_factors,
+    single_factor_backtest_report,
+)
 from cta_research.factors import calculate_factor_set
 from cta_research.portfolio import (
     blend_strategy_signals,
@@ -90,6 +95,30 @@ def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") ->
         }
     }
     research_outputs = {
+        "factor_scorecard": mine_factors(
+            research_factors,
+            data,
+            horizon=1,
+            quantiles=min(5, len(data.symbols)),
+            initial_capital=config.backtest.initial_capital,
+            fee_bps=config.backtest.fee_bps,
+            slippage_bps=config.backtest.slippage_bps,
+            gross_exposure=config.portfolio.max_gross_exposure,
+        ),
+        "factor_quantile_returns": factor_quantile_report(
+            research_factors,
+            data.close,
+            horizon=1,
+            quantiles=min(5, len(data.symbols)),
+        ),
+        "factor_single_backtests": single_factor_backtest_report(
+            research_factors,
+            data,
+            initial_capital=config.backtest.initial_capital,
+            fee_bps=config.backtest.fee_bps,
+            slippage_bps=config.backtest.slippage_bps,
+            gross_exposure=config.portfolio.max_gross_exposure,
+        ),
         "factor_ic_summary": factor_ic_decay(
             factors["momentum"],
             data.close,
