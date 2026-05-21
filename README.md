@@ -16,6 +16,14 @@ python -m pip install -e ".[dev]"
 python -m cta_research.cli configs/example.yaml --output-dir runs
 ```
 
+真實 Binance spot 日線回測設定：
+
+```powershell
+python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs
+```
+
+這份設定預期資料位於 `data/ohlcv/binance_spot_1d/`。`data/` 目錄已被 `.gitignore` 排除，適合存放本機下載的真實行情資料。
+
 每次執行會在 `runs/` 底下建立新的 run 目錄，輸出：
 
 - `config.yaml`

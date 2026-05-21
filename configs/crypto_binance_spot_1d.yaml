@@ -1,0 +1,27 @@
+data:
+  directory: ../data/ohlcv/binance_spot_1d
+  timeframe: 1d
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+
+backtest:
+  initial_capital: 100000
+  fee_bps: 10
+  slippage_bps: 2
+  execution: next_open
+
+portfolio:
+  strategy_weights:
+    trend: 0.45
+    mean_reversion: 0.20
+    swing: 0.25
+    alternative: 0.10
+  max_symbol_weight: 0.50
+  max_gross_exposure: 1.00
+  volatility_target: 0.25
+
+risk:
+  drawdown_warning: 0.15
+  drawdown_hard: 0.30
+  min_exposure_multiplier: 0.25
