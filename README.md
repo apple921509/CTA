@@ -115,6 +115,18 @@ onchain/mvrv/BTCUSDT.csv
 
 目前不強制安裝 Qlib；先提供穩定資料銜接層，之後可再加 native Qlib workflow。
 
+## 機器學習 Baseline
+
+`cta_research.ml` 提供第一版 supervised learning 研究流程：
+
+- 將多因子面板轉成 supervised dataset。
+- 支援 Linear Regression、Ridge、Random Forest baseline。
+- 使用 expanding window 做 walk-forward 預測。
+- 將模型預測轉成 cross-sectional long/short signal。
+- 可直接跑 ML signal backtest。
+
+這一層目前用來驗證特徵是否有穩定預測力，不建議直接視為可交易模型。深度模型如 LSTM、Transformer 會等 baseline 有明確價值後再加入。
+
 ## 目前進度
 
 - 完成 Python package 骨架與 CLI。
@@ -126,8 +138,9 @@ onchain/mvrv/BTCUSDT.csv
 - 完成 backtest accounting：fee、slippage、positions、trades、equity curve、metrics。
 - 完成 Binance/OKX 研究資料下載器。
 - 完成因子研究工具、鏈上因子工具、進階驗證工具與 Qlib 匯出工具。
+- 完成 Linear/Ridge/Random Forest 機器學習 baseline。
 - 每次 CLI run 會輸出回測、策略歸因、因子研究、Qlib 銜接與 HTML 總覽檔案。
-- 目前驗證：`pytest -v` 通過 67 個測試。
+- 目前驗證：`pytest -v` 通過 73 個測試。
 
 ## Roadmap
 
@@ -135,5 +148,7 @@ onchain/mvrv/BTCUSDT.csv
 - 加入 4h timeframe 範例與 multi-timeframe config。
 - 加入 Glassnode、CryptoQuant、Dune、Flipside 等付費/金鑰型 API adapter。
 - 加入 optional native Qlib integration。
+- 加入 XGBoost/LightGBM baseline。
+- 視資料量與 baseline 表現，再評估 LSTM/Transformer。
 - 強化 HTML 圖表：equity、drawdown、monthly returns、strategy attribution。
 - 等研究回測流程穩定後，才考慮 paper trading；live trading 不在目前版本範圍。

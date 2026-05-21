@@ -6,6 +6,7 @@ __all__ = [
     "downloaders",
     "factors",
     "factor_research",
+    "ml",
     "onchain",
     "strategies",
     "portfolio",

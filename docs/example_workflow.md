@@ -75,7 +75,23 @@ timestamp,value
 
 這一步的目的不是追求單次漂亮績效，而是確認策略是否能跨期間、跨參數維持合理表現。
 
-## 7. 匯出到 Qlib
+## 7. 建立機器學習 Baseline
+
+使用 `cta_research.ml` 可以把現有因子轉成 supervised dataset，先做簡單模型驗證：
+
+- Linear Regression
+- Ridge
+- Random Forest
+
+第一階段目標是檢查特徵是否有預測力，例如：
+
+- directional accuracy 是否高於隨機
+- rank IC 是否穩定
+- model signal backtest 是否比規則策略更穩
+
+深度模型如 LSTM、Transformer 不建議一開始就上，應該等線性與樹模型 baseline 有正面訊號後再做。
+
+## 8. 匯出到 Qlib
 
 每次 CLI run 都會輸出 Qlib-friendly CSV：
 
