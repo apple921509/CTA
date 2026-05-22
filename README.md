@@ -42,6 +42,18 @@ python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs
 
 完整操作流程請看 [docs/example_workflow.md](docs/example_workflow.md)。
 
+因子准入報告計算較慢，預設不執行。需要時加上：
+
+```powershell
+python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs --factor-mining
+```
+
+也可以只挖指定因子：
+
+```powershell
+python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs --factor-mining --factors momentum ma_slope volume_anomaly
+```
+
 ## 輸入資料
 
 每個交易標的一個 CSV。必要欄位：
@@ -82,7 +94,7 @@ YAML 設定檔中的相對資料路徑，會以該設定檔所在位置為基準
 - turnover
 - 單因子回測績效
 
-每次 CLI run 會輸出：
+加上 `--factor-mining` 後，CLI run 會輸出：
 
 - `factor_scorecard.csv`
 - `factor_quantile_returns.csv`

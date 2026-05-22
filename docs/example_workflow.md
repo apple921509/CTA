@@ -81,6 +81,18 @@ CLI run 會輸出：
 - `factor_quantile_returns.csv`
 - `factor_single_backtests.csv`
 
+因子准入報告計算較慢，普通回測預設不跑。需要時加上：
+
+```powershell
+python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs --factor-mining
+```
+
+如果只想檢查部分因子：
+
+```powershell
+python -m cta_research.cli configs/crypto_binance_spot_1d.yaml --output-dir runs --factor-mining --factors momentum ma_slope volume_anomaly
+```
+
 只有通過准入的因子，才應該進入多因子組合。弱因子不要用 ML 硬救。
 
 ## 7. 驗證穩健性

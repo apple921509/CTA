@@ -35,7 +35,42 @@ def _next_run_dir(output_dir: Path) -> Path:
     return output_dir / f"run_{len(existing) + 1:03d}"
 
 
-def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") -> Path:
+DEFAULT_RESEARCH_FACTOR_NAMES = {
+    "momentum",
+    "ma_slope",
+    "donchian",
+    "rsi",
+    "bollinger_zscore",
+    "volume_anomaly",
+    "vwap_deviation",
+    "price_volume_divergence",
+    "alternative",
+}
+
+
+def _select_research_factors(
+    factors: dict,
+    factor_names: list[str] | None = None,
+) -> dict:
+    selected_names = (
+        factor_names
+        if factor_names is not None
+        else sorted(name for name in DEFAULT_RESEARCH_FACTOR_NAMES if name in factors)
+    )
+    unknown = [name for name in selected_names if name not in factors]
+    if unknown:
+        names = ", ".join(unknown)
+        raise ValueError(f"Unknown factor name(s): {names}")
+    return {name: factors[name] for name in selected_names}
+
+
+def run_from_config(
+    config_path: str | Path,
+    output_dir: str | Path = "runs",
+    factor_mining: bool = False,
+    factor_names: list[str] | None = None,
+    factor_horizon: int = 1,
+) -> Path:
     config_path = Path(config_path)
     config = load_config(config_path)
     data = load_ohlcv_directory(config.data.directory, config.data.symbols)
@@ -78,47 +113,8 @@ def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") ->
     )
     metrics = calculate_metrics(result.equity, result.returns, result.trades)
     ic = factor_ic(factors["momentum"], data.close, horizons=[1, 3, 5, 10])
-    research_factors = {
-        name: frame
-        for name, frame in factors.items()
-        if name
-        in {
-            "momentum",
-            "ma_slope",
-            "donchian",
-            "rsi",
-            "bollinger_zscore",
-            "volume_anomaly",
-            "vwap_deviation",
-            "price_volume_divergence",
-            "alternative",
-        }
-    }
+    research_factors = _select_research_factors(factors, factor_names)
     research_outputs = {
-        "factor_scorecard": mine_factors(
-            research_factors,
-            data,
-            horizon=1,
-            quantiles=min(5, len(data.symbols)),
-            initial_capital=config.backtest.initial_capital,
-            fee_bps=config.backtest.fee_bps,
-            slippage_bps=config.backtest.slippage_bps,
-            gross_exposure=config.portfolio.max_gross_exposure,
-        ),
-        "factor_quantile_returns": factor_quantile_report(
-            research_factors,
-            data.close,
-            horizon=1,
-            quantiles=min(5, len(data.symbols)),
-        ),
-        "factor_single_backtests": single_factor_backtest_report(
-            research_factors,
-            data,
-            initial_capital=config.backtest.initial_capital,
-            fee_bps=config.backtest.fee_bps,
-            slippage_bps=config.backtest.slippage_bps,
-            gross_exposure=config.portfolio.max_gross_exposure,
-        ),
         "factor_ic_summary": factor_ic_decay(
             factors["momentum"],
             data.close,
@@ -136,6 +132,35 @@ def run_from_config(config_path: str | Path, output_dir: str | Path = "runs") ->
         "qlib_ohlcv": market_data_to_qlib_frame(data),
         "qlib_alpha360_like": build_alpha360_like_features(data, windows=[3, 5]),
     }
+    if factor_mining:
+        research_outputs.update(
+            {
+                "factor_scorecard": mine_factors(
+                    research_factors,
+                    data,
+                    horizon=factor_horizon,
+                    quantiles=min(5, len(data.symbols)),
+                    initial_capital=config.backtest.initial_capital,
+                    fee_bps=config.backtest.fee_bps,
+                    slippage_bps=config.backtest.slippage_bps,
+                    gross_exposure=config.portfolio.max_gross_exposure,
+                ),
+                "factor_quantile_returns": factor_quantile_report(
+                    research_factors,
+                    data.close,
+                    horizon=factor_horizon,
+                    quantiles=min(5, len(data.symbols)),
+                ),
+                "factor_single_backtests": single_factor_backtest_report(
+                    research_factors,
+                    data,
+                    initial_capital=config.backtest.initial_capital,
+                    fee_bps=config.backtest.fee_bps,
+                    slippage_bps=config.backtest.slippage_bps,
+                    gross_exposure=config.portfolio.max_gross_exposure,
+                ),
+            }
+        )
     strategy_returns = strategy_return_attribution(
         data=data,
         strategy_signals=strategy_signals,
@@ -163,8 +188,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run CTA research backtest")
     parser.add_argument("config", type=Path)
     parser.add_argument("--output-dir", type=Path, default=Path("runs"))
+    parser.add_argument(
+        "--factor-mining",
+        action="store_true",
+        help="Run slower single-factor admission reports.",
+    )
+    parser.add_argument(
+        "--factors",
+        nargs="+",
+        help="Optional factor names to include in factor mining and correlation reports.",
+    )
+    parser.add_argument(
+        "--factor-horizon",
+        type=int,
+        default=1,
+        help="Forward return horizon for factor mining reports.",
+    )
     args = parser.parse_args()
-    run_dir = run_from_config(args.config, args.output_dir)
+    run_dir = run_from_config(
+        args.config,
+        args.output_dir,
+        factor_mining=args.factor_mining,
+        factor_names=args.factors,
+        factor_horizon=args.factor_horizon,
+    )
     print(f"Wrote run outputs to {run_dir}")
 
 

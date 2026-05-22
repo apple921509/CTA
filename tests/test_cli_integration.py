@@ -17,9 +17,9 @@ def test_run_from_config_writes_report_outputs(tmp_path: Path) -> None:
     assert (run_dir / "trades.csv").exists()
     assert (run_dir / "strategy_returns.csv").exists()
     assert (run_dir / "factor_ic.csv").exists()
-    assert (run_dir / "factor_scorecard.csv").exists()
-    assert (run_dir / "factor_quantile_returns.csv").exists()
-    assert (run_dir / "factor_single_backtests.csv").exists()
+    assert not (run_dir / "factor_scorecard.csv").exists()
+    assert not (run_dir / "factor_quantile_returns.csv").exists()
+    assert not (run_dir / "factor_single_backtests.csv").exists()
     assert (run_dir / "factor_ic_summary.csv").exists()
     assert (run_dir / "factor_correlation.csv").exists()
     assert (run_dir / "momentum_quantile_returns.csv").exists()
@@ -34,12 +34,27 @@ def test_run_from_config_writes_report_outputs(tmp_path: Path) -> None:
 
     strategy_returns = pd.read_csv(run_dir / "strategy_returns.csv")
     factor_summary = pd.read_csv(run_dir / "factor_ic_summary.csv")
-    scorecard = pd.read_csv(run_dir / "factor_scorecard.csv")
     html = (run_dir / "report.html").read_text(encoding="utf-8")
     assert {"trend", "mean_reversion", "swing"}.issubset(strategy_returns.columns)
     assert {"horizon", "ic_mean", "positive_rate"}.issubset(factor_summary.columns)
-    assert {"factor", "decision"}.issubset(scorecard.columns)
     assert "charts/equity_curve.png" in html
+
+
+def test_run_from_config_writes_factor_mining_outputs_when_enabled(tmp_path: Path) -> None:
+    output_dir = tmp_path / "runs"
+    run_dir = run_from_config(
+        Path("configs/example.yaml"),
+        output_dir=output_dir,
+        factor_mining=True,
+        factor_names=["momentum", "ma_slope"],
+    )
+
+    assert (run_dir / "factor_scorecard.csv").exists()
+    assert (run_dir / "factor_quantile_returns.csv").exists()
+    assert (run_dir / "factor_single_backtests.csv").exists()
+    scorecard = pd.read_csv(run_dir / "factor_scorecard.csv")
+    assert set(scorecard["factor"]) == {"momentum", "ma_slope"}
+    assert {"factor", "decision"}.issubset(scorecard.columns)
 
 
 def test_cli_module_entrypoint_writes_outputs(tmp_path: Path) -> None:
@@ -63,3 +78,31 @@ def test_cli_module_entrypoint_writes_outputs(tmp_path: Path) -> None:
     assert (output_dir / "run_001" / "report.html").exists()
     assert (output_dir / "run_001" / "qlib_ohlcv.csv").exists()
     assert (output_dir / "run_001" / "charts" / "equity_curve.png").exists()
+    assert not (output_dir / "run_001" / "factor_scorecard.csv").exists()
+
+
+def test_cli_module_entrypoint_writes_factor_mining_outputs_when_enabled(tmp_path: Path) -> None:
+    output_dir = tmp_path / "runs"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cta_research.cli",
+            "configs/example.yaml",
+            "--output-dir",
+            str(output_dir),
+            "--factor-mining",
+            "--factors",
+            "momentum",
+            "ma_slope",
+            "--factor-horizon",
+            "1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Wrote run outputs to" in completed.stdout
+    assert (output_dir / "run_001" / "factor_scorecard.csv").exists()
